@@ -637,7 +637,10 @@ class PytestPluginManager(PluginManager):
     def _importconftest(
         self, conftestpath: Path, importmode: Union[str, ImportMode], rootpath: Path
     ) -> types.ModuleType:
-        existing = self.get_plugin(str(conftestpath))
+        # Avoid inconsistent path issues on Windows, see
+        # https://github.com/pytest-dev/pytest/issues/9765
+        normalized_conftestpath = os.path.normcase(conftestpath)
+        existing = self.get_plugin(normalized_conftestpath)
         if existing is not None:
             return cast(types.ModuleType, existing)
 
@@ -750,7 +753,11 @@ class PytestPluginManager(PluginManager):
 
     def consider_conftest(self, conftestmodule: types.ModuleType) -> None:
         """:meta private:"""
-        self.register(conftestmodule, name=conftestmodule.__file__)
+        name = conftestmodule.__file__
+        # Avoid inconsistent path issues on Windows, see
+        # https://github.com/pytest-dev/pytest/issues/9765
+        normalized_name = name if name is None else os.path.normcase(name)
+        self.register(conftestmodule, name=normalized_name)
 
     def consider_env(self) -> None:
         """:meta private:"""
